@@ -434,7 +434,9 @@ class Egany_Settings_API {
                                 <?php //submit_button(); ?>
 								
 								<input type="submit" class="button button-primary" value="Save Changes"></input>
-								<a href="<?php echo home_url().'/?fb2wp_hist' ?>" target="_blank" class="button" title="Must-have do Save Changes successfully before running" >Run Immediately</a>
+								<a href="<?php echo home_url().'/?fb2wp_type=all' ?>" target="_blank" class="button" title="Must-have do Save Changes successfully before running" >Import All</a>
+								<a href="<?php echo home_url().'/?fb2wp_type=page' ?>" target="_blank" class="button" title="Must-have do Save Changes successfully before running" >Import Page</a>
+								<a href="<?php echo home_url().'/?fb2wp_type=group' ?>" target="_blank" class="button" title="Must-have do Save Changes successfully before running" >Import Group</a>
                             </div>
                         </form>
                     </div>

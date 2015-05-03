@@ -32,10 +32,13 @@ class Egany_FB_Group_To_WP_Admin {
     function admin_menu() { 
 	
 		// phong.nguyen add main menu (+logo)  
-		$main_menu_id = 'edit.php?post_type=egany_fb2wp_post';  
-		// // add_menu_page(__('EGANY Facebook2WP', 'EGANY' ), __('Facebook to WP', 'EGANY' ), 'manage_options', $main_menu_id, null, plugins_url('/assets/images/logo.png', EGANY_PLUGIN_FILE) , 30); 
+		// $main_menu_id = 'edit.php?post_type=egany_fb2wp_post';  // egany_fb2wp_post
+		// add_menu_page(__('EGANY Facebook2WP Settings', 'EGANY' ), __('Facebook to WP', 'EGANY' ), 'manage_options', $main_menu_id, null, plugins_url('/assets/images/logo.png', EGANY_PLUGIN_FILE_FB2WP) , 30); 
 		
-        add_submenu_page( $main_menu_id, __( 'Facebook to WordPress Importer', 'EGANY' ), __( 'Settings', 'EGANY' ), 'manage_options', 'egany_fb2wp-settings', array( $this, 'settings_page' ) );
+        // add_submenu_page( $main_menu_id, __( 'EGANY Facebook2WP Settings', 'EGANY' ), __( 'Settings', 'EGANY' ), 'manage_options', 'egany_fb2wp-settings', array( $this, 'settings_page' ) ); 
+		add_object_page( __( 'EGANY Facebook2WP Settings', 'EGANY' ), __( 'Facebook to WP', 'EGANY' ), 'manage_options', 'egany_fb2wp-settings', array( $this, 'settings_page' ), plugins_url('/assets/images/logo.png', EGANY_PLUGIN_FILE_FB2WP) );
+		
+		
     }
 
     function get_settings_sections() {
@@ -260,6 +263,12 @@ class Egany_FB_Group_To_WP_Admin {
                 'desc'    => __( 'Posts fetched from Facebook in a single query' )
             ),
             array(
+                'name'    => 'max_page',
+                'label'   => __( 'Max. Queries', 'EGANY' ),
+                'default' => '10',
+                'desc'    => __( 'How many times for fetching data.' ) 
+            ),
+            array(
                 'name'    => 'post_status',
                 'label'   => __( 'Default Post Status', 'EGANY' ),
                 'default' => 'publish',
@@ -294,4 +303,3 @@ class Egany_FB_Group_To_WP_Admin {
         echo '</div>';
     }
 }
-

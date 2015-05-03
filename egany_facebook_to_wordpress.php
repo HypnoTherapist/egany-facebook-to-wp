@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /*
 Plugin Name: EGANY Facebook to WordPress importer
 Plugin URI: http://egany.com/
@@ -51,7 +51,7 @@ if ( is_admin() ) {
  */
 class Egany_FB_Group_To_WP {
 
-    private $post_type = 'egany_fb2wp_post';
+    private $post_type = 'post'; // egany_fb2wp_post
 
     /**
      * Constructor for the Egany_FB_Group_To_WP class
@@ -65,14 +65,15 @@ class Egany_FB_Group_To_WP {
      * @uses add_action()
      */
     public function __construct() {
-		define( 'EGANY_PLUGIN_FILE', __FILE__ );
+		define( 'EGANY_PLUGIN_FILE_FB2WP', __FILE__ );
+		// define( 'EGANY_PLUGIN_FOLDER', dir(__FILE__) );
 		
         register_activation_hook( __FILE__, array( $this, 'activate' ) );
         register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
 
         // Localize our plugin
         add_action( 'init', array( $this, 'localization_setup' ) );
-        add_action( 'init', array( $this, 'register_post_type' ) );
+        // add_action( 'init', array( $this, 'register_post_type' ) );
 
         add_action( 'init', array( $this, 'debug_run' ) );
         add_action( 'init', array( $this, 'historical_import' ) );
@@ -85,13 +86,22 @@ class Egany_FB_Group_To_WP {
 
         add_filter( 'the_content', array( $this, 'the_content' ) );
 		
+		//phong.nguyen 20150501: add ajax functions 
+		include('includes\egany_facebook_to_wordpress-ajax.php'); 
+		
         if ( is_admin() ) { 
             new Egany_FB_Group_To_WP_Admin();
 			
 			// phong.nguyen 20150416: register js/style such as Admin, Admin-Head  
 			add_action('admin_enqueue_scripts', array($this,'register_scripts_styles_admin'));
 			// add_action('admin_head', array($this,'register_scripts_admin_head')); 
+			
         }
+		else
+		{ 
+			// phong.nguyen 20150501: $this->register_scripts_styles_frontend;
+			add_action('wp_enqueue_scripts',array($this,'register_scripts_styles_frontend'));
+		}
     }
 
     /**
@@ -124,15 +134,16 @@ class Egany_FB_Group_To_WP {
         );
 
         $args = array(
-            'label'               => __( 'egany_fb2wp_post', 'EGANY' ),
-            'description'         => __( 'WordPress Facebook Post', 'EGANY' ),
+            'label'               => __( 'Facebook Post.', 'EGANY' ),
+            'description'         => __( 'Facebook Post..', 'EGANY' ),
             'labels'              => $labels,
             'supports'            => array( 'title', 'editor', 'post-formats', 'comments' ),
             'taxonomies'          => array( 'category', 'post_tag' ),
             'hierarchical'        => false,
             'public'              => true,
             'show_ui'             => true,
-            'show_in_menu'        => false, //phong.nguyen 20150430: change to "false" 
+            'show_in_menu'        => true,  
+			'menu_icon'			  => plugins_url('/assets/images/logo.png', EGANY_PLUGIN_FILE_FB2WP), //phong.nguyen 20150501: add icon ... 
             'show_in_nav_menus'   => true,
             'show_in_admin_bar'   => true,
             'can_export'          => true,
@@ -272,15 +283,15 @@ class Egany_FB_Group_To_WP {
      */
     function historical_import() {
 
-        if ( ! isset( $_GET['fb2wp_hist'] ) ) {
+		$strImportType = $_GET['fb2wp_type']; 
+        if ( ! isset( $strImportType ) ) {
             return;
         }
 
         if ( ! current_user_can( 'manage_options' ) ) {
             return;
         }
-
-        $root_page    = add_query_arg( array( 'fb2wp_hist' => '' ), home_url() );
+		
         $page_num     = isset( $_GET['page'] ) ? intval( $_GET['page'] ) : 1;
 		
 		
@@ -307,9 +318,19 @@ class Egany_FB_Group_To_WP {
         // $option_page       = $this->get_settings('fb2wp_page'); 
         // $option_group       = $this->get_settings('fb2wp_group'); 
         $arrOptions = array();  
-		$arrOptions['page'] = $this->get_settings('fb2wp_page'); 
-		$arrOptions['group'] = $this->get_settings('fb2wp_group'); 
 		
+		//phong.nguyen 20150503: check "Import Type"
+		if($strImportType == 'all')
+		{
+			$arrOptions['page'] = $this->get_settings('fb2wp_page'); 
+			$arrOptions['group'] = $this->get_settings('fb2wp_group'); 
+		}
+		else if($strImportType == 'page') 
+			$arrOptions['page'] = $this->get_settings('fb2wp_page'); 
+		else if($strImportType == 'group') 
+			$arrOptions['group'] = $this->get_settings('fb2wp_group'); 
+		
+		//do importing by options 
 		foreach($arrOptions as $key => $option)
 		{  
 			$access_token = $this->get_access_token($option_general, $option);   
@@ -320,15 +341,16 @@ class Egany_FB_Group_To_WP {
 			$source_id    = $this->get_source_id($option, $key);  // $option['page_id']; // 
 			$limit        = $this->get_limit($option_general, $option);   
 			$comment_max  = $this->get_comment_max($option_general, $option);   
+			$max_page  = $this->get_max_page($option_general, $option);   
 			 
 			//phong.nguyen 20150429 get token, source 
 			//add terms if not exist 
 			
 			//grant terms for current post. 
-			var_dump('fetch...'. $key);  
+			// var_dump('fetch...'. $key);  
 			
-			$this->fetch_facebook_data_history($key, $source_id, $limit, $access_token, $page_num, $comment_max);  
-			break; return; 
+			$this->fetch_facebook_data_history($key, $source_id, $limit, $max_page, $access_token, $page_num, $comment_max);  
+			// break; return; 
 		} 
 		
 		
@@ -370,14 +392,16 @@ class Egany_FB_Group_To_WP {
 			  )  
 			); 
 			
-			// var_dump('new: '); 
-			// var_dump($str_term_name); 
-			// var_dump($objTerm); 
+			// // // var_dump('new: '); 
 			// maybe ERROR: Cannot use object of type WP_Error as array...???  
 			// 	+ 'empty_term_name'=>...
 			// 	+ "A name is required for this term..."   
 			$str_term_id = $objTerm['term_id']; 
 		}  
+		
+			// var_dump($str_taxonomy); 
+			// var_dump($str_term_name); 
+			// var_dump($objTerm); 
 		 
 		
 		// //update term 
@@ -396,58 +420,26 @@ class Egany_FB_Group_To_WP {
      * @param string $source_type 
      * @param string $source_id 
      * @param string $limit  
+     * @param string $max_page  
      * @param string $access_token   
      * @param string $page_num    
      * @param string $comment_max    
      * @return none 
      */
-    function fetch_facebook_data_history($source_type, $source_id, $limit, $access_token, $page_num, $comment_max) { 
+    function fetch_facebook_data_history($source_type, $source_id, $limit, $max_page, $access_token, $page_num, $comment_max) { 
 		
 		//fetch Facebook data... 
-		$count = $this->fetch_facebook_data($source_type, $source_id, $limit, $access_token, $page_num, $comment_max); 
+		$decoded_fb_posts = null; 
+		$count = $this->fetch_facebook_data($source_type, $source_id, $limit, $max_page, $access_token, $page_num, $comment_max, $decoded_fb_posts); 
 		 
 		 
 		// var_dump($source_id);   
 		// var_dump($option_page);   
-        // // show debug info
-        printf( '<strong>%d</strong> posts imported<br>', $count );
-        printf( 'Showing Page: %d<br>', $page_num );
-        printf( 'Per Page: %d<br>', $limit );
-        printf( 'Group/Page ID: %s<br>', $source_id );
-
-        // Build the next page URL
-        // Reload the page automatically after few seconds
-        // and do it's thing without killing the server
-		if(isset($decoded) ) // phong.nguyen 20150417 fixed bug != null  
-		{
-			if ( $page_num && property_exists( $decoded, 'paging' ) ) {
-
-				$paging = $decoded->paging;
-				parse_str( $paging->next, $next_page );
-
-				$next_page_url = add_query_arg( array(
-					'page'         => ($page_num + 1),
-					'until'        => $next_page['until'],
-					'paging_token' => $next_page['__paging_token']
-				), $root_page );
-			
-			// // if($page_num >= 2) 
-			// // {
-				// // // var_dump($decoded);  
-				// var_dump($fb_url);  
-				// var_dump(admin_url().'asd01...');   
-				// return; 
-			// // }  
-				?>
-				<script type="text/javascript">
-					setTimeout(function(){
-						window.location.href = '<?php echo $next_page_url; ?>';  
-						// window.open('<?php echo $next_page_url; ?>', '_blank');  
-					}, 5000);
-				</script>
-				<?php
-			} 
-		} 
+        
+        include('includes\html-data-history.php');   
+		//insert js for admin head. 
+		include('assets\js\fbwp_admin_head.php');  
+		
 		
 		return true;  
 		
@@ -460,25 +452,34 @@ class Egany_FB_Group_To_WP {
      * @param string $source_type 
      * @param string $source_id 
      * @param string $limit  
+     * @param string $max_page  
      * @param string $access_token   
      * @param string $page_num    
      * @param string $comment_max    
+     * @param string $decoded_fb_posts    
      * @return none 
      */
-    function fetch_facebook_data($source_type, $source_id, $limit, $access_token, $page_num, $comment_max) {
+    function fetch_facebook_data($source_type, $source_id, $limit, $max_page, $access_token, $page_num, $comment_max, &$decoded_fb_posts, $paging_until=null, $paging_token=null) {  
 		
         // Hardcode.20150401 choose API Version 2.3   
         //$fb_url       = 'https://graph.facebook.com/' . $source_id . '/feed/?limit=' . $limit . '&access_token=' . $access_token;  
-        $fb_url = 'https://graph.facebook.com/v2.3/' . $source_id . '/feed/?limit=' . $limit . '&access_token=' . $access_token;  
+        $fb_url = 'https://graph.facebook.com/v2.3/' . $source_id . '/feed/?limit=' . $limit . '&access_token=' . $access_token; //  . '&page='.$page_num;  
 		//https://graph.facebook.com/v2.3/$page_id/feed/?limit=250&access_token=$API|$SecretKey
 
         // build the query URL for next page
         if ( $page_num > 1 ) {
-            $until        = isset( $_GET['until'] ) ? $_GET['until'] : '';
-            $paging_token = isset( $_GET['paging_token'] ) ? $_GET['paging_token'] : '';
+			// // old code 
+            // // $until        = isset( $_GET['until'] ) ? $_GET['until'] : '';
+            // // $paging_token = isset( $_GET['paging_token'] ) ? $_GET['paging_token'] : '';
 
+            // // $fb_url = add_query_arg( array(
+                // // 'until'          => $until,
+                // // '__paging_token' => $paging_token, 
+            // // ), $fb_url );
+			
+			//phong.nguyen 20150502: add __paging_token (...error05-only 3 items, NOT 6) 
             $fb_url = add_query_arg( array(
-                'until'          => $until,
+                'until'          => $paging_until, 
                 '__paging_token' => $paging_token, 
             ), $fb_url );
         }
@@ -486,7 +487,9 @@ class Egany_FB_Group_To_WP {
         // do the import
         $json_posts  = $this->fetch_stream( $fb_url );
         $decoded     = json_decode( $json_posts );
+		$decoded_fb_posts = $decoded;  
         $group_posts = $decoded->data; 
+		// var_dump($fb_url); 
 		
 		// phong.nguyen 20150430: get page_name + page_id. Ex: truyen-thong-123456...  
 		$fb_url = 'https://graph.facebook.com/v2.3/' . $source_id . '/?access_token=' . $access_token;  
@@ -494,16 +497,20 @@ class Egany_FB_Group_To_WP {
         $decoded     = json_decode( $json_posts );
         $page_group_info = $decoded;  
 		
-		//add category (by FB name + FB id) 
-		$str_taxonomy = 'category'; 
-		$str_category_slug = $page_group_info->name . '-'. (string)$page_group_info->id;  
-		// // var_dump($str_category_slug);  
-		$this->get_term($str_taxonomy, $str_category_slug, $page_group_info->name, $page_group_info->name . '; id = '. (string) $page_group_info->id  ); // nguyễn asd01 => (auto transfer)  nguyen-asd01    
+		if(isset($page_group_info))
+		{
+			//add category (by FB name + FB id) 
+			$str_taxonomy = 'category'; 
+			$str_category_slug = $page_group_info->name . '-'. (string)$page_group_info->id;  
+			// // var_dump($str_category_slug);  
+			$this->get_term($str_taxonomy, $str_category_slug, $page_group_info->name, $page_group_info->name . '; id = '. (string) $page_group_info->id  ); // nguyễn asd01 => (auto transfer)  nguyen-asd01    
+			
+			// var_dump($page_group_info);  
+			// var_dump($fb_url);   
+			// return;  
 		
+		}
 		
-		// var_dump($page_group_info);  
-		// var_dump($fb_url);   
-		// return;  
 		
 		
 		//http://issues.egany.com/view.php?id=116 (Cho phép chọn get Comments / Post	)  ...  
@@ -511,8 +518,7 @@ class Egany_FB_Group_To_WP {
 		//next id: $json_comments->paging->cursors->after
 		//next link: $json_comments->paging->next 
 		//exp.: https://graph.facebook.com/v2.3/183711941649962_885739388113877/comments?... 
-		
-		// (rotate to first one AAA!!!-ok, it's not like this )  =>  {"data": [ ]}  
+		//Ex. for result:  =>  {"data": [ ]}  
 		
 		
 		//phong.nguyen 20150419 collect more comments 
@@ -572,6 +578,22 @@ class Egany_FB_Group_To_WP {
 		$str_max_page_or_group =  $option_page_or_group['comment_max']; 
 		
 		return (trim($str_max_page_or_group)!='' & isset($str_max_page_or_group)) ? $str_max_page_or_group : $str_max_general;  
+	}
+	
+    /**
+     * get_max_page
+     *
+     * @author phong.nguyen 20150503  
+     * @param array $option_general 
+     * @param array $option_page_or_group 
+     * @return integer  
+     */
+    function get_max_page($option_general, $option_page_or_group) { 
+		
+		$str_max_page_general = isset( $option_general['max_page'] ) ? intval( $option_general['max_page'] ) : 10; 
+		$str_max_page_page_or_group = isset( $option_page_or_group['max_page'] ) ? intval( $option_page_or_group['max_page'] ) : 10;  
+		
+		return ($str_max_page_page_or_group != 0) ? $str_max_page_page_or_group : $str_max_page_general;   
 	}
 	
     /**
@@ -664,11 +686,13 @@ class Egany_FB_Group_To_WP {
 			//phong.nguyen 20150416 get token, source ....
 			$source_id    = $this->get_source_id($option, $key);  // $option['page_id']; // 
 			$limit        = $this->get_limit($option_general, $option);   
+			$max_page 	  = $this->get_max_page($option_general, $option);   
 			$comment_max  = $this->get_comment_max($option_general, $option);   
 			 
 			//phong.nguyen 20150429 get token, source 
 			// var_dump('fetch...'. $key);  
-			$count += $this->fetch_facebook_data($key, $source_id, $limit, $access_token, $page_num, $comment_max);   
+			$decoded_fb_posts = null; 
+			$count += $this->fetch_facebook_data($key, $source_id, $limit, $max_page, $access_token, $page_num, $comment_max, $decoded_fb_posts);   
 			// break; return; 
 		} 
 		
@@ -823,7 +847,8 @@ class Egany_FB_Group_To_WP {
 		$str_taxonomy = 'post_tag';     
 		$str_term_id = $this->get_term($str_taxonomy, $str_tag_slug, $str_tag_slug, $str_tag_slug ); // nguyễn asd01 => (auto transfer)  nguyen-asd01    
 		// // var_dump('wp_set_post_terms...');     
-		// // var_dump($str_term_id);     
+		// // var_dump('post_id...' .$post_id);     
+		// // var_dump('str_term_id...' .$str_term_id);     
 		wp_set_post_terms( $post_id, array($str_term_id), $str_taxonomy ); // okok- 'page'   
 		
 		// // set att. for current post: category (truyen-thong-123456...)   
@@ -858,7 +883,7 @@ class Egany_FB_Group_To_WP {
 		
 		// phong.nguyen 20150419: find out an existing _fb_post_id 
 		$args1 = array(
-			'post_type'      => 'egany_fb2wp_post',
+			'post_type'      => $this->post_type,
 			'post_status' => array('publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit', 'trash'), 
 
 			'posts_per_page' => -1,
@@ -1015,7 +1040,7 @@ class Egany_FB_Group_To_WP {
             'comment_content'    => $fb_comment->message,
             'comment_date'       => gmdate( 'Y-m-d H:i:s', ( strtotime( $fb_comment->created_time ) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) ) ),
             'comment_approved'   => 1,
-            'comment_type'       => 'egany_fb2wp_post'
+            'comment_type'       => $this->post_type, 
         );
 
         $meta = array(
@@ -1070,7 +1095,7 @@ class Egany_FB_Group_To_WP {
             $source_id    = get_post_meta( $post->ID, '_fb_group_id', true );
 
 			//phong.nguyen 20150416: corrected "id=%d"  =>  "id=%s"  
-            $author_link = sprintf( '<a href="https://facebook.com/profile.php?id=%s" target="_blank">%s</a>', $author_id, $author_name );
+            $author_link = sprintf( '<a href="https://facebook.com/%s" target="_blank">%s</a>', $author_id, $author_name );
 			
 			$source_link = 'https://facebook.com';  
 			$option = get_option( 'fb2wp_general', array() );
@@ -1108,7 +1133,7 @@ class Egany_FB_Group_To_WP {
      * @return array
      */
     function avatar_comment_type( $types ) {
-        $types[] = 'egany_fb2wp_post';
+        $types[] = $this->post_type;
 
         return $types;
     }
@@ -1128,7 +1153,7 @@ class Egany_FB_Group_To_WP {
             return $avatar;
         }
 
-        if ( empty( $id_or_email->comment_type ) || $id_or_email->comment_type != 'egany_fb2wp_post' ) {
+        if ( empty( $id_or_email->comment_type ) || $id_or_email->comment_type != $this->post_type ) {
             return $avatar;
         }
 
@@ -1164,6 +1189,18 @@ class Egany_FB_Group_To_WP {
 	/**
 	 * Register any scripts, styles 
 	 *
+	 * phong.nguyen 20150501  
+	 * @return void
+	 */
+	public function register_scripts_styles_frontend( ) {
+		
+		// //phong.nguyen 20150501: add bootstrap... 
+		// wp_enqueue_style( 'bootstrap-3.3.2', plugins_url('/assets/bootstrap-3.3.2-dist/cssasd/bootstrap.min.css' , __FILE__ )); // ok  
+	}
+	
+	/**
+	 * Register any scripts, styles 
+	 *
 	 * phong.nguyen 20150416 
 	 * @return void
 	 */
@@ -1174,6 +1211,9 @@ class Egany_FB_Group_To_WP {
 		// // add_action( 'wp_enqueue_scripts', array( $this, 'scripts' ) );
 		// wp_enqueue_style( 'admin-style-fbwp', plugins_url('/assets/css/style_admin.css' , __FILE__ )); // ok
 		wp_enqueue_script( 'admin-script-fbwp', plugins_url('/assets/js/fbwp_admin.js' , __FILE__ ), array( 'jquery' )); // ok
+		
+		// //add bootstrap...
+		// wp_enqueue_style( 'bootstrap-3.3.2', plugins_url('/assets/bootstrap-3.3.2-dist/css/bootstrap.min.css' , __FILE__ )); // ok  
 	}
 	
 	
@@ -1193,5 +1233,6 @@ class Egany_FB_Group_To_WP {
 } // Egany_FB_Group_To_WP
 
 $wp_fb_import = Egany_FB_Group_To_WP::init();
+$GLOBAlS['wp_fb_import'] = $wp_fb_import; 
 
 

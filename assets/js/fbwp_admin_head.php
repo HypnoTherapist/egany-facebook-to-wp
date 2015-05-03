@@ -15,6 +15,21 @@ $(document).ready(function () { // nono
 
 
 
+/**
+ * elp_show_ajax_loader
+ * 
+ * @author phong 20150414  
+ */
+function elp_show_ajax_loader(str_block_html_id) {
+	$( str_block_html_id ).block({
+		message: null,
+		overlayCSS: {
+			background: '#fff url("<?php echo plugins_url('/assets/images/ajax-loader.gif', EGANY_PLUGIN_FILE_FB2WP) ?>") no-repeat center',   
+			opacity: 0.6,  
+		}
+	});
+}
+
 
 //more... 
 
