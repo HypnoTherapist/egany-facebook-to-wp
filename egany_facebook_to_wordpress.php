@@ -549,8 +549,9 @@ class Egany_FB_Group_To_WP {
 					}  
 				}  
 				
-				//show testing result ... 
-				$post->comments->data = $arr_comment_data; 
+				//show testing result ...  
+				if(isset($post->comments->data)) 
+					$post->comments->data = $arr_comment_data; 
 				// // var_dump($post->comments->data[0]->id );  
 				// var_dump(count($post->comments->data ));  
 				// return;  
