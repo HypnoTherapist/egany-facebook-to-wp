@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: EGANY Facebook to WordPress importer
+Plugin Name: EGANY Facebook to WordPress (a free version) 
 Plugin URI: http://egany.com/
 Description: Import Facebook group/page posts to WordPress
 Version: 1.0

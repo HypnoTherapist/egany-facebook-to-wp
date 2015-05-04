@@ -262,12 +262,12 @@ class Egany_FB_Group_To_WP_Admin {
                 'default' => '30',
                 'desc'    => __( 'Posts fetched from Facebook in a single query' )
             ),
-            array(
-                'name'    => 'max_page',
-                'label'   => __( 'Max. Queries', 'EGANY' ),
-                'default' => '10',
-                'desc'    => __( 'How many times for fetching data.' ) 
-            ),
+            // array(
+                // 'name'    => 'max_page',
+                // 'label'   => __( 'Max. Queries', 'EGANY' ),
+                // 'default' => '10',
+                // 'desc'    => __( 'How many times for fetching data.' ) 
+            // ),
             array(
                 'name'    => 'post_status',
                 'label'   => __( 'Default Post Status', 'EGANY' ),
@@ -279,12 +279,11 @@ class Egany_FB_Group_To_WP_Admin {
             array(
                 'name'    => 'comment_max',
                 'label'   => __( 'Get Comments per Post', 'EGANY' ), 
-                'default' => 'open',
+                'default' => '25',
                 'type'    => 'select',
                 'options' => array(
                     ''   => __( '', 'EGANY' ),
-                    '25'   => __( '25', 'EGANY' ),
-                    'unlimited' => __( 'Unlimited', 'EGANY' )
+                    '25'   => __( '25', 'EGANY' ), 
                 ),
             ),
 		
