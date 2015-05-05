@@ -48,8 +48,9 @@ Nothing here yet
 == Screenshots ==
 
 1. Settings
-2. Posts
-3. Posts in frontend
+2. Import Page
+3. List of posts 
+3. View Facebook post 
 
 == Changelog ==
 
