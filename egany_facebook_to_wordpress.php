@@ -68,8 +68,8 @@ class Egany_FB_Group_To_WP {
 		define( 'EGANY_PLUGIN_FILE_FB2WP', __FILE__ );
 		// define( 'EGANY_PLUGIN_FOLDER', dir(__FILE__) );
 		
-        register_activation_hook( __FILE__, array( $this, 'activate' ) );
-        register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
+        // register_activation_hook( __FILE__, array( $this, 'activate' ) );
+        // register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
 
         // Localize our plugin
         add_action( 'init', array( $this, 'localization_setup' ) );
@@ -79,7 +79,7 @@ class Egany_FB_Group_To_WP {
         add_action( 'init', array( $this, 'historical_import' ) );
         add_action( 'egany_fb2wp_import', array( $this, 'do_import' ) );
 
-        add_filter( 'cron_schedules', array($this, 'cron_schedules') );
+        // add_filter( 'cron_schedules', array($this, 'cron_schedules') ); // nono, NOT work!!!  
 
         add_filter( 'get_avatar_comment_types', array( $this, 'avatar_comment_type' ) );
         add_filter( 'get_avatar', array( $this, 'get_avatar' ), 10, 3 );
@@ -180,7 +180,7 @@ class Egany_FB_Group_To_WP {
      */
     public function activate() {
         if ( false == wp_next_scheduled( 'egany_fb2wp_import' ) ){
-            wp_schedule_event( time(), 'half-hour', 'egany_fb2wp_import' );
+            wp_schedule_event( time(), 'egany-30minutes', 'egany_fb2wp_import' );
         }
     }
 
@@ -202,20 +202,20 @@ class Egany_FB_Group_To_WP {
         load_plugin_textdomain( 'EGANY', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
     }
 
-    /**
-     * Add new cron schedule
-     *
-     * @param  array $schedules
-     * @return array
-     */
-    function cron_schedules( $schedules ) {
-        $schedules['half-hour'] = array(
-            'interval' => MINUTE_IN_SECONDS * 30,
-            'display' => __( 'In every 30 Minutes', 'EGANY' )
-        );
+    // /**
+     // * Add new cron schedule
+     // *
+     // * @param  array $schedules
+     // * @return array
+     // */
+    // function cron_schedules( $schedules ) {
+        // $schedules['half-hour'] = array(
+            // 'interval' => MINUTE_IN_SECONDS * 30,
+            // 'display' => __( 'In every 30 Minutes', 'EGANY' )
+        // );
 
-        return $schedules;
-    }
+        // return $schedules;
+    // }
 
     /**
      * Manually trigger the cron
@@ -315,8 +315,6 @@ class Egany_FB_Group_To_WP {
 		}
 		
         $option_general       = $this->get_settings('fb2wp_general'); 
-        // $option_page       = $this->get_settings('fb2wp_page'); 
-        // $option_group       = $this->get_settings('fb2wp_group'); 
         $arrOptions = array();  
 		
 		//phong.nguyen 20150503: check "Import Type"
